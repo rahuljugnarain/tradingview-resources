@@ -1,0 +1,66 @@
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © rahuljugnarain
+
+//Indicator Inputs
+showATR = input(true, title="Show ATR")
+showSSL = input(true, title="Show SSL")
+showKijunsen = input(true, title="KS")
+showTenkansen = input(true, title="TK")
+showKumoClouds=input(true, title="Kumo")
+showChikou = input(true, title="Chikou")
+
+//SSL
+study(title="Multiple Chart Indicators", shorttitle="MCI", overlay=true)
+period = input(title="SSL Period", defval=10)
+len = input(title="SSL Period", defval=10)
+smaHigh = sma(high, len)
+smaLow = sma(low, len)
+Hlv = int(na)
+Hlv := close > smaHigh ? 1 : close < smaLow ? -1 : Hlv[1]
+sslDown = Hlv < 0 ? smaHigh : smaLow
+sslUp = Hlv < 0 ? smaLow : smaHigh
+
+plot(sslDown, linewidth=2, color=color.red, transp = showSSL ? 0 : 100)
+plot(sslUp, linewidth=2, color=color.lime, transp = showSSL ? 0 : 100)
+
+//Ichimoku
+conversionPeriods = input(9, minval=1, title="Conversion Line Periods")
+basePeriods = input(26, minval=1, title="Base Line Periods")
+laggingSpan2Periods = input(52, minval=1, title="Lagging Span 2 Periods")
+displacement = input(26, minval=1, title="Displacement")
+donchian(len) => avg(lowest(len), highest(len))
+conversionLine = donchian(conversionPeriods)
+baseLine = donchian(basePeriods)
+leadLine1 = avg(conversionLine, baseLine)
+leadLine2 = donchian(laggingSpan2Periods)
+plot(conversionLine, color=#0496ff, title="Conversion Line", transp = showTenkansen ? 0 : 100)
+plot(baseLine, color=#991515, title="Base Line", transp = showKijunsen ? 0 : 100)
+plot(close, offset = -displacement + 1, color=#459915, title="Lagging Span", transp = showChikou ? 0 : 100)
+p1 = plot(leadLine1, offset = displacement - 1, color=color.green,
+	 title="Lead 1", transp = showKumoClouds ? 0 : 100)
+p2 = plot(leadLine2, offset = displacement - 1, color=color.red,
+	 title="Lead 2", transp = showKumoClouds ? 0 : 100)
+fill(p1, p2, color = leadLine1 > leadLine2 ? color.green : color.red, transp = showKumoClouds ? 0 : 100)
+
+//ATR
+isLong             = input(title="Is Long?", defval = true)
+atrLength          = 14
+atrMultip_profit   = input(title="ATR Profit Multiplier", defval = 1, type = input.float) //used for atr trailing stop loss
+atrMultip_loss     = input(title="ATR Stop Multiplier", defval = 1.5, type = input.float) //used for atr trailing stop loss
+
+ma_function(source, length) => rma(source, length)
+
+// truncate() truncates a given number to a certain number of decimals
+truncate(number, decimals) =>
+    factor = pow(10, decimals)
+    int(number * factor) / factor
+
+atr = truncate(ma_function(tr(true), atrLength),5)
+
+AtrLong  = isLong ? close + atr* atrMultip_profit : close - atr* atrMultip_profit
+AtrShort = isLong ? close - atr* atrMultip_loss   : close + atr* atrMultip_loss
+
+plot(AtrLong , color = color.lime,transp = showATR ? 0 : 100)
+plot(AtrShort, color = color.red,transp = showATR ? 0 : 100)
+
